@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Eye, Download, Trash2 } from "lucide-react";
+import { Eye, Download, Trash2, Upload } from "lucide-react";
 import FolderIcon from "../images/folder.png";
 import FolderIcon2 from "../images/folder2.png";
 
-const API_BASE = "https://textfileserver-a165358fe7c8.herokuapp.com/api/v1/file";
+const API_BASE = "https://loggerproj-eb5c86fee925.herokuapp.com/api/v1/file";
+
+const getFilesFromResponse = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.files)) return response.files;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.files)) return response.data.files;
+  return [];
+};
 
 const TxtViewer = () => {
   const [files, setFiles] = useState([]);
@@ -15,21 +23,56 @@ const TxtViewer = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false); // sidebar preview loader
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        const res = await axios.get(API_BASE);
-        setFiles(res.data.data || []);
-        if (res.data.data?.length > 0) setSelectedFile(res.data.data[0]);
-      } catch (err) {
-        console.error("Error fetching files:", err);
-      } finally {
-        setTimeout(() => setInitialLoading(false), 800);
+useEffect(() => {
+  const fetchFiles = async () => {
+    try {
+      const res = await axios.get(API_BASE);
+
+      const nextFiles = getFilesFromResponse(res.data);
+      console.log("FILES:", nextFiles);
+
+      setFiles(nextFiles);
+
+      if (nextFiles.length > 0) {
+        setSelectedFile(nextFiles[0]);
       }
-    };
-    fetchFiles();
-  }, []);
+    } catch (err) {
+      console.error("Error fetching files:", err);
+    } finally {
+      setTimeout(() => setInitialLoading(false), 800);
+    }
+  };
+
+  fetchFiles();
+}, []);
+
+
+  const handleUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploading(true);
+    setUploadError("");
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await axios.post(`${API_BASE}/upload`, formData);
+      const res = await axios.get(API_BASE);
+      setFiles(getFilesFromResponse(res.data));
+    } catch (err) {
+      setUploadError(
+        err.response?.data?.message || "Could not upload the file."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // 🔹 Modal (double-click full view)
   const handleView = async (file) => {
@@ -94,9 +137,27 @@ const TxtViewer = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-8">
-      <h1 className="text-2xl sm:text-4xl font-extrabold mb-6 sm:mb-8 text-black drop-shadow-sm text-center sm:text-left">
-        📂 File Manager
-      </h1>
+      <div className="flex flex-col gap-4 mb-6 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-black drop-shadow-sm text-center sm:text-left">
+          📂 File Manager
+        </h1>
+        <label className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg shadow transition text-sm sm:text-base ${uploading ? "bg-gray-400 cursor-wait" : "bg-indigo-500 hover:bg-indigo-600 cursor-pointer"} text-white`}>
+          <Upload className="w-4 h-4" />
+          {uploading ? "Uploading..." : "Upload .txt"}
+          <input
+            type="file"
+            accept=".txt,text/plain"
+            className="hidden"
+            onChange={handleUpload}
+            disabled={uploading}
+          />
+        </label>
+      </div>
+      {uploadError && (
+        <p className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {uploadError}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Left Section */}
