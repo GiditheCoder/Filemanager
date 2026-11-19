@@ -4,7 +4,7 @@ import { Eye, Download, Trash2, Upload } from "lucide-react";
 import FolderIcon from "../images/folder.png";
 import FolderIcon2 from "../images/folder2.png";
 
-const API_BASE = "https://bestaf-logger-0e2900cffa8d.herokuapp.com/";
+const API_BASE = "https://loggerproj-eb5c86fee925.herokuapp.com/api/v1/file";
 
 const getFilesFromResponse = (response) => {
   if (Array.isArray(response)) return response;
@@ -62,7 +62,7 @@ useEffect(() => {
     formData.append("file", file);
 
     try {
-      await axios.post(`${API_BASE}upload`, formData);
+      await axios.post(`${API_BASE}/upload`, formData);
       const res = await axios.get(API_BASE);
       setFiles(getFilesFromResponse(res.data));
     } catch (err) {
@@ -80,7 +80,7 @@ useEffect(() => {
     setShowPopup(true);
     setFileContent("");
     try {
-      const res = await axios.get(`${API_BASE}${file._id}`, {
+      const res = await axios.get(`${API_BASE}/${file._id}`, {
         responseType: "text",
       });
       setTimeout(() => {
@@ -102,7 +102,7 @@ useEffect(() => {
     }
     setPreviewLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}${file._id}`, {
+      const res = await axios.get(`${API_BASE}/${file._id}`, {
         responseType: "text",
       });
       setTimeout(() => {
@@ -116,12 +116,12 @@ useEffect(() => {
   };
 
   const handleDownload = (file) => {
-    window.open(`${API_BASE}${file._id}`, "_blank");
+    window.open(`${API_BASE}/${file._id}`, "_blank");
   };
 
   const handleDelete = async (file) => {
     try {
-      const res = await axios.delete(`${API_BASE}${file._id}`);
+      const res = await axios.delete(`${API_BASE}/${file._id}`);
       if (res.data.success) {
         setFiles(files.filter((f) => f._id !== file._id));
         setSelectedFile(null);
